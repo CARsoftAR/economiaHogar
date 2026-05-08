@@ -10,6 +10,7 @@ import 'data/repositories/reminder_repository.dart';
 import 'presentation/providers/transaction_provider.dart';
 import 'presentation/providers/category_provider.dart';
 import 'presentation/providers/reminder_provider.dart';
+import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
 
 void main() async {
@@ -58,7 +59,7 @@ class EconomiaHogarApp extends StatelessWidget {
         Locale('es', 'AR'),
       ],
       locale: const Locale('es', 'AR'),
-      home: const DashboardScreen(),
+      home: const SplashScreen(),
     );
   }
 }

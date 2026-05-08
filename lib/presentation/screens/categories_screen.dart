@@ -127,7 +127,7 @@ class CategoriesScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Eliminar categoría?'),
-        content: Text('Esta acción no se puede deshacer. Las transacciones existentes mantendrán su ID.'),
+        content: const Text('Esta acción no se puede deshacer. Las transacciones existentes mantendrán su ID.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           TextButton(
@@ -166,30 +166,42 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
   Color _selectedColor = const Color(0xFFFF0000);
 
   final List<IconData> _availableIcons = [
+    // Técnicos
+    Icons.electrical_services_rounded,
+    Icons.handyman_rounded,
+    Icons.build_rounded,
+    Icons.bolt_rounded,
+    Icons.settings_suggest_rounded,
+    // Negocios
+    Icons.description_rounded,
+    Icons.request_quote_rounded,
+    Icons.account_balance_rounded,
+    Icons.badge_rounded,
+    // Logística
+    Icons.local_shipping_rounded,
+    Icons.ev_station_rounded,
+    Icons.location_on_rounded,
+    // Hogar / Varios
+    Icons.cleaning_services_rounded,
+    Icons.security_rounded,
+    Icons.inventory_2_rounded,
     Icons.shopping_cart_rounded,
     Icons.restaurant_rounded,
-    Icons.commute_rounded,
-    Icons.school_rounded,
-    Icons.handyman_rounded,
-    Icons.medical_services_rounded,
     Icons.movie_filter_rounded,
-    Icons.payments_rounded,
-    Icons.electrical_services_rounded,
-    Icons.work_rounded,
     Icons.star_rounded,
     Icons.more_horiz_rounded,
   ];
 
   final List<Color> _availableColors = [
-    const Color(0xFFFF0000),
-    const Color(0xFF2E7D32),
-    const Color(0xFF1976D2),
-    const Color(0xFFFFA000),
-    const Color(0xFF7B1FA2),
-    const Color(0xFFC2185B),
-    const Color(0xFF0097A7),
-    const Color(0xFF5D4037),
-    const Color(0xFF455A64),
+    const Color(0xFFFF0000), // Rojo Intenso
+    const Color(0xFF2E7D32), // Verde
+    const Color(0xFF1976D2), // Azul
+    const Color(0xFFFFA000), // Ámbar
+    const Color(0xFF7B1FA2), // Púrpura
+    const Color(0xFFC2185B), // Rosa
+    const Color(0xFF0097A7), // Cian
+    const Color(0xFF5D4037), // Marrón
+    const Color(0xFF455A64), // Gris Azulado
   ];
 
   @override
@@ -205,105 +217,118 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('NUEVA CATEGORÍA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF2D3436))),
-              IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: 'Nombre de la Categoría',
-              filled: true,
-              fillColor: const Color(0xFFF8F9FA),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('NUEVA CATEGORÍA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF2D3436))),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTypeButton('Egreso', !_isIncome, () => setState(() => _isIncome = false)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Nombre de la Categoría',
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
               ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildTypeButton('Ingreso', _isIncome, () => setState(() => _isIncome = true)),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTypeButton('Egreso', !_isIncome, () => setState(() => _isIncome = false)),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _buildTypeButton('Ingreso', _isIncome, () => setState(() => _isIncome = true)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 25),
+            const Text('Elegir Icono', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+            const SizedBox(height: 15),
+            
+            // Grid de Iconos
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
               ),
-            ],
-          ),
-          const SizedBox(height: 25),
-          const Text('Elegir Icono', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
               itemCount: _availableIcons.length,
               itemBuilder: (context, index) {
                 final icon = _availableIcons[index];
+                final isSelected = _selectedIcon == icon;
                 return GestureDetector(
                   onTap: () => setState(() => _selectedIcon = icon),
                   child: Container(
-                    margin: const EdgeInsets.only(right: 15),
-                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _selectedIcon == icon ? const Color(0xFFFF0000).withOpacity(0.1) : const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(10),
-                      border: _selectedIcon == icon ? Border.all(color: const Color(0xFFFF0000)) : null,
+                      color: isSelected ? const Color(0xFFFF0000).withOpacity(0.1) : const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected ? Border.all(color: const Color(0xFFFF0000), width: 2) : null,
                     ),
-                    child: Icon(icon, color: _selectedIcon == icon ? const Color(0xFFFF0000) : Colors.grey),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 25),
-          const Text('Elegir Color', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _availableColors.length,
-              itemBuilder: (context, index) {
-                final color = _availableColors[index];
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = color),
-                  child: Container(
-                    width: 40,
-                    margin: const EdgeInsets.only(right: 15),
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: _selectedColor == color ? Border.all(color: Colors.black, width: 2) : null,
+                    child: Icon(
+                      icon,
+                      color: isSelected ? const Color(0xFFFF0000) : Colors.grey[600],
+                      size: 24,
                     ),
                   ),
                 );
               },
             ),
-          ),
-          const SizedBox(height: 35),
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: _saveCategory,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF0000),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 0,
+            
+            const SizedBox(height: 25),
+            const Text('Elegir Color', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+            const SizedBox(height: 15),
+            SizedBox(
+              height: 45,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _availableColors.length,
+                itemBuilder: (context, index) {
+                  final color = _availableColors[index];
+                  final isSelected = _selectedColor == color;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedColor = color),
+                    child: Container(
+                      width: 45,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: isSelected ? Border.all(color: Colors.black, width: 3) : Border.all(color: Colors.white, width: 2),
+                        boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)] : null,
+                      ),
+                    ),
+                  );
+                },
               ),
-              child: const Text('GUARDAR CATEGORÍA', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
             ),
-          ),
-        ],
+            const SizedBox(height: 35),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _saveCategory,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF0000),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 0,
+                ),
+                child: const Text('GUARDAR CATEGORÍA', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
