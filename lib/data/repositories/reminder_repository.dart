@@ -1,0 +1,43 @@
+import '../../data/models/reminder_model.dart';
+import '../../core/database/database_helper.dart';
+
+abstract class ReminderRepository {
+  Future<List<ReminderModel>> getAllReminders();
+  Future<void> addReminder(ReminderModel reminder);
+  Future<void> updateReminder(ReminderModel reminder);
+  Future<void> deleteReminder(int id);
+}
+
+class SqliteReminderRepository implements ReminderRepository {
+  final dbHelper = DatabaseHelper.instance;
+
+  @override
+  Future<List<ReminderModel>> getAllReminders() async {
+    final db = await dbHelper.database;
+    final result = await db.query('reminders', orderBy: 'due_date ASC');
+    return result.map((json) => ReminderModel.fromMap(json)).toList();
+  }
+
+  @override
+  Future<void> addReminder(ReminderModel reminder) async {
+    final db = await dbHelper.database;
+    await db.insert('reminders', reminder.toMap());
+  }
+
+  @override
+  Future<void> updateReminder(ReminderModel reminder) async {
+    final db = await dbHelper.database;
+    await db.update(
+      'reminders',
+      reminder.toMap(),
+      where: 'id = ?',
+      whereArgs: [reminder.id],
+    );
+  }
+
+  @override
+  Future<void> deleteReminder(int id) async {
+    final db = await dbHelper.database;
+    await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
+  }
+}

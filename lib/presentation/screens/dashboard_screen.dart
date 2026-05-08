@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui';
 import '../../core/theme/app_theme.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/category_provider.dart';
 import '../widgets/add_transaction_modal.dart';
-import '../../core/widgets/glass_container.dart';
+import 'reports_screen.dart';
+import 'categories_screen.dart';
+import 'reminders_screen.dart';
 
 import '../../data/models/category_model.dart';
 import '../../data/models/transaction_model.dart';
 
 import '../widgets/trend_line_chart.dart';
-
-import 'package:flutter/services.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,428 +26,329 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<TransactionProvider>().fetchTransactions(),
-    );
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.microtask(() {
+      context.read<CategoryProvider>().fetchCategories();
+      context.read<TransactionProvider>().fetchTransactions();
+    });
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    // Pro Currency Format: $3.000,00
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 2,
       locale: 'es_AR',
     );
-    final dateFormat = DateFormat('dd MMM, yyyy');
-
+    
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Header / Floating Glass Card with Trend
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.only(top: 70, left: 20, right: 20, bottom: 20),
-              child: Consumer<TransactionProvider>(
-                builder: (context, provider, child) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(35),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 40,
-                          offset: const Offset(0, 20),
-                        ),
-                      ],
-                    ),
-                    child: GlassContainer(
-                      blur: 20,
-                      opacity: 0.1,
-                      borderRadius: 35,
-                      padding: const EdgeInsets.all(30),
-                      child: Column(
+      backgroundColor: const Color(0xFFF8F9FA),
+      drawer: _buildDrawer(context),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -30,
+            right: -30,
+            child: _buildBackgroundShape(const Color(0xFFFFCDD2).withOpacity(0.15), 320),
+          ),
+          Positioned(
+            bottom: 120,
+            left: -50,
+            child: _buildBackgroundShape(const Color(0xFFE0E0E0).withOpacity(0.2), 280),
+          ),
+          
+          SafeArea(
+            child: Consumer2<TransactionProvider, CategoryProvider>(
+              builder: (context, provider, categoryProvider, child) {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 25),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'SALDO TOTAL',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 11,
-                              letterSpacing: 2.5,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Stack(
-                            alignment: Alignment.center,
+                          Row(
                             children: [
-                              const TrendLineChart(),
-                              Text(
-                                currencyFormat.format(provider.balance),
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 44,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -1.5,
+                              Builder(
+                                builder: (context) => _buildGlassIconButton(
+                                  icon: Icons.menu_rounded,
+                                  onTap: () => Scaffold.of(context).openDrawer(),
                                 ),
+                              ),
+                              const SizedBox(width: 15),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+                                  ),
+                                  const Text('Resumen Mensual', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 30),
                           Row(
                             children: [
-                              Expanded(
-                                child: _buildStatItem(
-                                  'INGRESOS',
-                                  provider.monthlyIncome,
-                                  const Color(0xFF43A047),
-                                  Icons.arrow_upward_rounded,
-                                  currencyFormat,
+                              _buildGlassIconButton(
+                                icon: Icons.notifications_none_rounded,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RemindersScreen()),
                                 ),
                               ),
-                              Container(width: 1, height: 30, color: Colors.grey[200]),
-                              Expanded(
-                                child: _buildStatItem(
-                                  'GASTOS',
-                                  provider.monthlyExpense,
-                                  AppTheme.primaryRed,
-                                  Icons.arrow_downward_rounded,
-                                  currencyFormat,
+                              const SizedBox(width: 10),
+                              _buildGlassIconButton(
+                                icon: Icons.bar_chart_rounded,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const ReportsScreen()),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Category Summary
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(25, 15, 25, 15),
-              child: Text(
-                'Gasto por Categoría',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black87),
-              ),
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: Consumer<TransactionProvider>(
-              builder: (context, provider, child) {
-                final topCategories = provider.categoryStats.take(4).toList();
-                
-                if (topCategories.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 2.5,
-                    ),
-                    itemCount: topCategories.length,
-                    itemBuilder: (context, index) {
-                      final stat = topCategories[index];
-                      final category = CategoryModel.getById(stat['categoryId']);
-                      final amount = stat['total'] as double;
-                      final progress = (amount / (provider.monthlyIncome > 0 ? provider.monthlyIncome : 100000)).clamp(0.1, 0.9);
-
-                      return GlassContainer(
-                        blur: 5,
-                        opacity: 0.05,
-                        borderRadius: 15,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      
+                      const SizedBox(height: 30),
+                      
+                      _buildGlassCard(
+                        padding: const EdgeInsets.all(25),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Row(
+                            const Text(
+                              'SALDO ACTUAL',
+                              style: TextStyle(color: Colors.grey, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(height: 12),
+                            Stack(
+                              alignment: Alignment.center,
                               children: [
-                                Icon(category.icon, size: 16, color: category.color),
-                                const SizedBox(width: 6),
-                                Expanded(
+                                const Opacity(opacity: 0.15, child: TrendLineChart()),
+                                FittedBox(
                                   child: Text(
-                                    category.name,
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    currencyFormat.format(provider.balance),
+                                    style: const TextStyle(color: Color(0xFF2D3436), fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -1.5),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  currencyFormat.format(amount).split(',')[0],
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: LinearProgressIndicator(
-                                value: progress,
-                                backgroundColor: Colors.grey[200],
-                                color: category.color,
-                                minHeight: 6,
-                              ),
+                            const SizedBox(height: 30),
+                            Row(
+                              children: [
+                                Expanded(child: _buildStatItem('INGRESOS', provider.monthlyIncome, const Color(0xFF2E7D32), currencyFormat)),
+                                Container(width: 1, height: 35, color: Colors.black.withOpacity(0.05)),
+                                Expanded(child: _buildStatItem('GASTOS', provider.monthlyExpense, const Color(0xFFFF0000), currencyFormat)),
+                              ],
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                      
+                      const SizedBox(height: 35),
+                      const Text('Gasto por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      const SizedBox(height: 15),
+                      
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: provider.categoryStats.take(4).map((stat) {
+                          final category = categoryProvider.getCategoryById(stat['categoryId']);
+                          final amount = stat['total'] as double;
+                          final progress = (amount / (provider.monthlyIncome > 0 ? provider.monthlyIncome : 100000)).clamp(0.05, 1.0);
+                          
+                          return SizedBox(
+                            width: (MediaQuery.of(context).size.width - 52) / 2,
+                            child: _buildGlassCard(
+                              padding: const EdgeInsets.all(15),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(category.icon, size: 16, color: category.color),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          category.name,
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    currencyFormat.format(amount).split(',')[0],
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    height: 3,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.03),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: progress,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: category.color.withOpacity(0.4),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      
+                      const SizedBox(height: 35),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Movimientos Recientes',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('Ver todos', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF0000))),
+                          ),
+                        ],
+                      ),
+                      
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: provider.transactions.length,
+                        itemBuilder: (context, index) {
+                          final tx = provider.transactions[index];
+                          final category = categoryProvider.getCategoryById(tx.categoryId);
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _buildGlassCard(
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: category.color.withOpacity(0.1),
+                                    child: Icon(category.icon, color: category.color, size: 18),
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2D3436))),
+                                        Text(
+                                          tx.description.isEmpty ? 'Sin descripción' : tx.description,
+                                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '${tx.isIncome ? '+' : '-'}${currencyFormat.format(tx.amount)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15,
+                                      color: tx.isIncome ? const Color(0xFF2E7D32) : const Color(0xFFFF0000),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      const SizedBox(height: 100),
+                    ],
                   ),
                 );
               },
             ),
           ),
-
-          // Transactions List Label
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(25, 30, 25, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Flexible(
-                    child: Text(
-                      'Movimientos Recientes',
-                      style: TextStyle(
-                        fontSize: 20, 
-                        fontWeight: FontWeight.w800, 
-                        color: Colors.black87,
-                        letterSpacing: -0.5,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryRed,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text('Ver todos', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          Consumer<TransactionProvider>(
-            builder: (context, provider, child) {
-              if (provider.isLoading) {
-                return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
-              }
-
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final tx = provider.transactions[index];
-                    final category = CategoryModel.getById(tx.categoryId);
-                    
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                      child: GestureDetector(
-                        onTap: () => _showTransactionDetail(tx, category),
-                        onLongPress: () {
-                          HapticFeedback.heavyImpact();
-                          _showDeleteConfirm(tx.id!);
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: GlassContainer(
-                            blur: 10,
-                            opacity: 0.02,
-                            borderRadius: 20,
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: category.color.withOpacity(0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(category.icon, color: category.color, size: 22),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        category.name,
-                                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                                      ),
-                                      Text(
-                                        tx.description.isEmpty ? 'Sin descripción' : tx.description,
-                                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${tx.isIncome ? '+' : '-'}${currencyFormat.format(tx.amount)}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
-                                        color: tx.isIncome ? const Color(0xFF2E7D32) : AppTheme.primaryRed,
-                                      ),
-                                    ),
-                                    Text(
-                                      dateFormat.format(tx.date),
-                                      style: TextStyle(color: Colors.grey[400], fontSize: 11),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: provider.transactions.length,
-                ),
-              );
-            },
-          ),
-          
-          // BOTTOM PADDING for FAB visibility
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
-      floatingActionButton: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryRed.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () => _showAddTransaction(context),
-          label: const Text('NUEVO', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-          icon: const Icon(Icons.add_rounded, size: 24),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddTransaction(context),
+        label: const Text('NUEVO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        backgroundColor: const Color(0xFFFF0000),
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundShape(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+        child: Container(color: Colors.transparent),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.0),
+          ),
+          child: child,
         ),
       ),
     );
   }
 
-  void _showTransactionDetail(TransactionModel tx, CategoryModel category) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Row(
-          children: [
-            Icon(category.icon, color: category.color),
-            const SizedBox(width: 10),
-            Text(category.name),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.date)}'),
-            const SizedBox(height: 10),
-            const Text('Nota:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(tx.description.isEmpty ? 'Sin nota adicional' : tx.description),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
-        ],
+  Widget _buildGlassIconButton({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: _buildGlassCard(
+        padding: const EdgeInsets.all(10),
+        child: Icon(icon, color: const Color(0xFFFF0000), size: 22),
       ),
     );
   }
 
-  void _showDeleteConfirm(int id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar movimiento?'),
-        content: const Text('Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () {
-              context.read<TransactionProvider>().deleteTransaction(id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Movimiento eliminado')),
-              );
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, double value, Color color, IconData icon, NumberFormat format) {
+  Widget _buildStatItem(String label, double value, Color color, NumberFormat format) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          format.format(value),
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        const SizedBox(height: 4),
+        Text(format.format(value), style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
       ],
     );
   }
@@ -456,6 +359,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddTransactionModal(),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          Container(
+            height: 180,
+            width: double.infinity,
+            padding: const EdgeInsets.all(25),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8F9FA),
+              border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ECONOMÍA', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFFFF0000))),
+                Text('HOGAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildDrawerItem(
+            icon: Icons.dashboard_rounded,
+            title: 'Dashboard',
+            onTap: () => Navigator.pop(context),
+          ),
+          _buildDrawerItem(
+            icon: Icons.category_rounded,
+            title: 'Categorías',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoriesScreen()));
+            },
+          ),
+          _buildDrawerItem(
+            icon: Icons.notifications_none_rounded,
+            title: 'Agenda de Pagos',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const RemindersScreen()));
+            },
+          ),
+          _buildDrawerItem(
+            icon: Icons.bar_chart_rounded,
+            title: 'Reportes',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ReportsScreen()));
+            },
+          ),
+          const Spacer(),
+          const Padding(
+            padding: EdgeInsets.all(25),
+            child: Text('Versión 1.3.0', style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF2D3436)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
     );
   }
 }

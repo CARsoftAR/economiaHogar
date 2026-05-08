@@ -9,6 +9,7 @@ class TransactionProvider with ChangeNotifier {
   double _monthlyIncome = 0.0;
   double _monthlyExpense = 0.0;
   List<Map<String, dynamic>> _categoryStats = [];
+  DateTime _selectedMonth = DateTime.now();
   bool _isLoading = false;
 
   TransactionProvider({required this.repository});
@@ -18,25 +19,26 @@ class TransactionProvider with ChangeNotifier {
   double get monthlyIncome => _monthlyIncome;
   double get monthlyExpense => _monthlyExpense;
   List<Map<String, dynamic>> get categoryStats => _categoryStats;
+  DateTime get selectedMonth => _selectedMonth;
   bool get isLoading => _isLoading;
+
+  void setSelectedMonth(DateTime month) {
+    _selectedMonth = month;
+    fetchTransactions();
+  }
 
   Future<void> fetchTransactions() async {
     _isLoading = true;
     notifyListeners();
     
-    // Seed mock data for first run
-    final dbHelper = (repository as dynamic).dbHelper; // Quick access for demo
-    await dbHelper.seedMockData();
+    _transactions = await repository.getAllTransactions(month: _selectedMonth);
+    _balance = await repository.getBalance();
     
-    _transactions = await repository.getAllTransactions();
-    _balance = await repository.getTotalBalance();
-    
-    final now = DateTime.now();
-    final stats = await repository.getMonthlyStats(now);
+    final stats = await repository.getMonthlyStats(_selectedMonth);
     _monthlyIncome = stats['income'] ?? 0.0;
     _monthlyExpense = stats['expense'] ?? 0.0;
     
-    _categoryStats = await dbHelper.getCategoryStats(now);
+    _categoryStats = await repository.getCategoryStats(_selectedMonth);
     
     _isLoading = false;
     notifyListeners();

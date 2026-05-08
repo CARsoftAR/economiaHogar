@@ -5,10 +5,27 @@ import '../models/transaction_model.dart';
 class SqliteTransactionRepository implements TransactionRepository {
   final dbHelper = DatabaseHelper.instance;
 
+  SqliteTransactionRepository();
+
   @override
-  Future<List<TransactionModel>> getAllTransactions() async {
+  Future<List<TransactionModel>> getAllTransactions({DateTime? month}) async {
     final db = await dbHelper.database;
-    final result = await db.query('transactions', orderBy: 'date DESC');
+    String? where;
+    List<dynamic>? whereArgs;
+
+    if (month != null) {
+      final start = DateTime(month.year, month.month, 1).toIso8601String();
+      final end = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
+      where = 'date >= ? AND date <= ?';
+      whereArgs = [start, end];
+    }
+
+    final result = await db.query(
+      'transactions', 
+      where: where, 
+      whereArgs: whereArgs, 
+      orderBy: 'date DESC',
+    );
     return result.map((json) => TransactionModel.fromMap(json)).toList();
   }
 
@@ -25,14 +42,19 @@ class SqliteTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<double> getTotalBalance() async {
+  Future<double> getBalance() async {
     final db = await dbHelper.database;
     final result = await db.rawQuery('SELECT SUM(CASE WHEN isIncome = 1 THEN amount ELSE -amount END) as total FROM transactions');
-    return result.first['total'] as double? ?? 0.0;
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
   @override
   Future<Map<String, double>> getMonthlyStats(DateTime month) async {
     return await dbHelper.getMonthlyStats(month);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getCategoryStats(DateTime month) async {
+    return await dbHelper.getCategoryStats(month);
   }
 }

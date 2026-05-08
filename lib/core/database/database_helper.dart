@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../../data/models/category_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -19,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4, // Subimos a la v4 para los recordatorios
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -28,6 +29,30 @@ class DatabaseHelper {
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE transactions ADD COLUMN categoryId TEXT NOT NULL DEFAULT "others"');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE categories (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          icon_code INTEGER NOT NULL,
+          color_hex INTEGER NOT NULL,
+          is_income INTEGER NOT NULL
+        )
+      ''');
+      await _seedDefaultCategories(db);
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          amount REAL NOT NULL,
+          due_date TEXT NOT NULL,
+          type TEXT NOT NULL,
+          is_completed INTEGER NOT NULL
+        )
+      ''');
     }
   }
 
@@ -42,52 +67,40 @@ class DatabaseHelper {
         categoryId TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        icon_code INTEGER NOT NULL,
+        color_hex INTEGER NOT NULL,
+        is_income INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE reminders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        due_date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        is_completed INTEGER NOT NULL
+      )
+    ''');
+
+    await _seedDefaultCategories(db);
+    await _seedInitialData(db);
   }
 
-  Future<Map<String, double>> getMonthlyStats(DateTime month) async {
-    final db = await instance.database;
-    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
-    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
-
-    final result = await db.rawQuery('''
-      SELECT isIncome, SUM(amount) as total 
-      FROM transactions 
-      WHERE date >= ? AND date <= ?
-      GROUP BY isIncome
-    ''', [firstDay, lastDay]);
-
-    double income = 0;
-    double expense = 0;
-
-    for (var row in result) {
-      if (row['isIncome'] == 1) {
-        income = row['total'] as double;
-      } else {
-        expense = row['total'] as double;
-      }
+  Future<void> _seedDefaultCategories(Database db) async {
+    for (var category in CategoryModel.defaultCategories) {
+      await db.insert('categories', category.toMap(), conflictAlgorithm: ConflictAlgorithm.ignore);
     }
-
-    return {'income': income, 'expense': expense};
   }
 
-  Future<List<Map<String, dynamic>>> getCategoryStats(DateTime month) async {
-    final db = await instance.database;
-    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
-    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
-
-    return await db.rawQuery('''
-      SELECT categoryId, SUM(amount) as total 
-      FROM transactions 
-      WHERE date >= ? AND date <= ? AND isIncome = 0
-      GROUP BY categoryId
-      ORDER BY total DESC
-    ''', [firstDay, lastDay]);
-  }
-
-  Future<void> seedMockData() async {
-    final db = await instance.database;
+  Future<void> _seedInitialData(Database db) async {
     final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM transactions'));
-    
     if (count == 0) {
       final now = DateTime.now();
       final mockData = [
@@ -98,15 +111,31 @@ class DatabaseHelper {
         {'amount': 1500.0, 'description': 'Salida Cine', 'date': now.subtract(const Duration(days: 1)).toIso8601String(), 'isIncome': 0, 'categoryId': 'leisure'},
         {'amount': 3000.0, 'description': 'Venta Laptop', 'date': now.toIso8601String(), 'isIncome': 1, 'categoryId': 'sales'},
       ];
-
       for (var data in mockData) {
         await db.insert('transactions', data);
       }
     }
   }
 
-  Future close() async {
-    final db = await instance.database;
-    db.close();
+  // Métodos de consulta existentes... (omitidos para brevedad pero se mantienen)
+  Future<Map<String, double>> getMonthlyStats(DateTime month) async {
+    final db = await database;
+    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
+    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
+    final result = await db.rawQuery('SELECT isIncome, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? GROUP BY isIncome', [firstDay, lastDay]);
+    double income = 0;
+    double expense = 0;
+    for (var row in result) {
+      if (row['isIncome'] == 1) income = row['total'] as double;
+      else expense = row['total'] as double;
+    }
+    return {'income': income, 'expense': expense};
+  }
+
+  Future<List<Map<String, dynamic>>> getCategoryStats(DateTime month) async {
+    final db = await database;
+    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
+    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
+    return await db.rawQuery('SELECT categoryId, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? AND isIncome = 0 GROUP BY categoryId ORDER BY total DESC', [firstDay, lastDay]);
   }
 }
