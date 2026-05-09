@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import 'reports_screen.dart';
 import 'reminders_screen.dart';
 import 'categories_screen.dart';
+import 'settings_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -22,6 +23,7 @@ class _MainShellState extends State<MainShell> {
     const ReportsScreen(),
     const RemindersScreen(),
     const CategoriesScreen(),
+    const SettingsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -79,6 +81,7 @@ class _MainShellState extends State<MainShell> {
                 _buildNavItem(Icons.bar_chart_rounded, 1, 'Reportes'),
                 _buildNavItem(Icons.event_note_rounded, 2, 'Agenda'),
                 _buildNavItem(Icons.category_rounded, 3, 'Categorías'),
+                _buildNavItem(Icons.settings_rounded, 4, 'Ajustes'),
               ],
             ),
           ),

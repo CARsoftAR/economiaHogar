@@ -42,4 +42,22 @@ class TransactionModel {
   String toJson() => json.encode(toMap());
 
   factory TransactionModel.fromJson(String source) => TransactionModel.fromMap(json.decode(source));
+
+  TransactionModel copyWith({
+    int? id,
+    double? amount,
+    String? description,
+    DateTime? date,
+    bool? isIncome,
+    String? categoryId,
+  }) {
+    return TransactionModel(
+      id: id ?? this.id,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      isIncome: isIncome ?? this.isIncome,
+      categoryId: categoryId ?? this.categoryId,
+    );
+  }
 }

@@ -10,6 +10,7 @@ import '../widgets/add_transaction_modal.dart';
 import 'reports_screen.dart';
 import 'categories_screen.dart';
 import 'reminders_screen.dart';
+import 'transactions_history_screen.dart';
 import '../widgets/edit_budget_modal.dart';
 import '../widgets/fade_in_slide.dart';
 
@@ -72,9 +73,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 25),
-                      
                       const SizedBox(height: 15),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const SizedBox(width: 40), // Equilibrio visual
+                          const Text(
+                            'ECO-MILER',
+                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 2, color: Colors.grey),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.search_rounded, color: Color(0xFFFF0000)),
+                            onPressed: () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const TransactionsHistoryScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 5),
                       
                       // CONTENEDOR PRINCIPAL BLANCO
                       FadeInSlide(
@@ -90,6 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Column(
                           children: [
+                            // 0. NAVEGADOR DE MESES
+                            _buildMonthNavigator(provider),
+                            
+                            const SizedBox(height: 25),
+
                             // 1. BLOQUE DE SALDO PRINCIPAL
                             Column(
                               children: [
@@ -169,17 +196,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 35),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
+                        children: const [
+                          Expanded(
                             child: Text(
                               'Movimientos Recientes',
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          TextButton(
-                            onPressed: () {},
-                            child: const Text('Ver todos', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF0000))),
                           ),
                         ],
                       ),
@@ -377,6 +400,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
         onTap: () => HapticFeedback.lightImpact(),
+        onLongPress: () {
+          HapticFeedback.heavyImpact();
+          _showTransactionOptions(context, tx);
+        },
         child: _buildGlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
           child: Row(
@@ -467,6 +494,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildMonthNavigator(TransactionProvider provider) {
+    final monthName = DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase();
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, color: Colors.grey),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            provider.setSelectedMonth(DateTime(provider.selectedMonth.year, provider.selectedMonth.month - 1));
+          },
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            monthName,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF2D3436), letterSpacing: 0.5),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            provider.setSelectedMonth(DateTime(provider.selectedMonth.year, provider.selectedMonth.month + 1));
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeFilters(TransactionProvider provider) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildSmallFilterChip('Todos', provider.selectedTypeFilter == null, () => provider.setSelectedTypeFilter(null)),
+        const SizedBox(width: 8),
+        _buildSmallFilterChip('Ingresos', provider.selectedTypeFilter == true, () => provider.setSelectedTypeFilter(true)),
+        const SizedBox(width: 8),
+        _buildSmallFilterChip('Gastos', provider.selectedTypeFilter == false, () => provider.setSelectedTypeFilter(false)),
+      ],
+    );
+  }
+
+  Widget _buildSmallFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF0000).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isSelected ? Border.all(color: const Color(0xFFFF0000), width: 1) : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFFFF0000) : Colors.grey,
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterPill(String label, PeriodType period, TransactionProvider provider) {
     final isSelected = provider.selectedPeriod == period;
     return Expanded(
@@ -496,12 +596,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showAddTransaction(BuildContext context) {
+  void _showAddTransaction(BuildContext context, [TransactionModel? tx]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddTransactionModal(),
+      builder: (context) => AddTransactionModal(transaction: tx),
+    );
+  }
+
+  void _showTransactionOptions(BuildContext context, TransactionModel tx) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(25),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+            ),
+            const SizedBox(height: 25),
+            const Text('OPCIONES DE MOVIMIENTO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.grey)),
+            const SizedBox(height: 25),
+            _buildOptionItem(
+              icon: Icons.edit_note_rounded,
+              label: 'Editar Movimiento',
+              color: const Color(0xFF0984E3),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddTransaction(context, tx);
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildOptionItem(
+              icon: Icons.delete_sweep_rounded,
+              label: 'Eliminar Permanente',
+              color: const Color(0xFFFF0000),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeleteTransaction(context, tx);
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionItem({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 15),
+            Text(label, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: color)),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.3)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteTransaction(BuildContext context, TransactionModel tx) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¿Eliminar Movimiento?', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: const Text('Esta acción quitará el monto de tu saldo y no se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
+          ElevatedButton(
+            onPressed: () {
+              context.read<TransactionProvider>().deleteTransaction(tx.id!);
+              Navigator.pop(context);
+              HapticFeedback.lightImpact();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text('ELIMINAR', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 

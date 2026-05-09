@@ -34,6 +34,17 @@ class SqliteTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<void> updateTransaction(TransactionModel transaction) async {
+    final db = await dbHelper.database;
+    await db.update(
+      'transactions',
+      transaction.toMap(),
+      where: 'id = ?',
+      whereArgs: [transaction.id],
+    );
+  }
+
+  @override
   Future<void> deleteTransaction(int id) async {
     final db = await dbHelper.database;
     await db.delete('transactions', where: 'id = ?', whereArgs: [id]);

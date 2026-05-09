@@ -52,20 +52,95 @@ class ReportsScreen extends StatelessWidget {
                     children: [
                       const FadeInSlide(
                         duration: Duration(milliseconds: 800),
-                        child: Text('Distribución de Gastos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                        child: Text('Tendencia de Gastos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
                       ),
                       const SizedBox(height: 5),
                       FadeInSlide(
                         delay: const Duration(milliseconds: 200),
                         child: Text(
-                          DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                          'EVOLUCIÓN DIARIA DEL MES',
+                          style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1),
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 25),
                       
                       FadeInSlide(
-                        delay: const Duration(milliseconds: 400),
+                        delay: const Duration(milliseconds: 300),
+                        child: _buildGlassCard(
+                          padding: const EdgeInsets.only(top: 25, right: 20, bottom: 10),
+                          child: SizedBox(
+                            height: 200,
+                            child: LineChart(
+                              LineChartData(
+                                gridData: FlGridData(show: false),
+                                titlesData: FlTitlesData(
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 22,
+                                      getTitlesWidget: (value, meta) {
+                                        if (value % 5 == 0 && value != 0) {
+                                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.grey, fontSize: 10));
+                                        }
+                                        return const SizedBox();
+                                      },
+                                    ),
+                                  ),
+                                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                ),
+                                borderData: FlBorderData(show: false),
+                                lineBarsData: [
+                                  LineChartBarData(
+                                    spots: provider.dailyStats.map((s) => FlSpot(s['day'].toDouble(), s['amount'].toDouble())).toList(),
+                                    isCurved: true,
+                                    color: const Color(0xFFFF0000),
+                                    barWidth: 4,
+                                    isStrokeCapRound: true,
+                                    dotData: FlDotData(show: false),
+                                    belowBarData: BarAreaData(
+                                      show: true,
+                                      color: const Color(0xFFFF0000).withOpacity(0.1),
+                                    ),
+                                  ),
+                                ],
+                                lineTouchData: LineTouchData(
+                                  touchTooltipData: LineTouchTooltipData(
+                                    getTooltipColor: (spot) => const Color(0xFF2D3436),
+                                    getTooltipItems: (touchedSpots) {
+                                      return touchedSpots.map((spot) {
+                                        return LineTooltipItem(
+                                          'Día ${spot.x.toInt()}\n${currencyFormat.format(spot.y)}',
+                                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                        );
+                                      }).toList();
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 40),
+                      const FadeInSlide(
+                        delay: Duration(milliseconds: 400),
+                        child: Text('Distribución de Gastos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      ),
+                      const SizedBox(height: 5),
+                      FadeInSlide(
+                        delay: const Duration(milliseconds: 500),
+                        child: Text(
+                          DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
+                          style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1),
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      
+                      FadeInSlide(
+                        delay: const Duration(milliseconds: 500),
                         child: _buildGlassCard(
                           padding: const EdgeInsets.all(20),
                           child: Column(
@@ -81,7 +156,7 @@ class ReportsScreen extends StatelessWidget {
                                         sections: stats.map((stat) {
                                           final category = categoryProvider.getCategoryById(stat['categoryId']);
                                           final amount = stat['total'] as double;
-                                          final percentage = (amount / totalExpenses * 100);
+                                          final percentage = (amount / (totalExpenses > 0 ? totalExpenses : 1) * 100);
                                           
                                           return PieChartSectionData(
                                             color: category.color,
@@ -115,7 +190,7 @@ class ReportsScreen extends StatelessWidget {
                       
                       const SizedBox(height: 40),
                       const FadeInSlide(
-                        delay: Duration(milliseconds: 600),
+                        delay: Duration(milliseconds: 700),
                         child: Text('Desglose por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
                       ),
                       const SizedBox(height: 15),
@@ -134,7 +209,7 @@ class ReportsScreen extends StatelessWidget {
                           final category = categoryProvider.getCategoryById(stat['categoryId']);
                           final amount = stat['total'] as double;
                           return FadeInSlide(
-                            delay: Duration(milliseconds: 800 + (index * 100)),
+                            delay: Duration(milliseconds: 900 + (index * 100)),
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _buildGlassCard(
@@ -157,7 +232,7 @@ class ReportsScreen extends StatelessWidget {
                             ),
                           );
                         }),
-                      const SizedBox(height: 120), // ESPACIO PARA LA BARRA
+                      const SizedBox(height: 120),
                     ],
                   ),
                 );

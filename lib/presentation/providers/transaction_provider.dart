@@ -14,11 +14,15 @@ class TransactionProvider with ChangeNotifier {
   List<Map<String, dynamic>> _categoryStats = [];
   DateTime _selectedMonth = DateTime.now();
   PeriodType _selectedPeriod = PeriodType.mes;
+  bool? _selectedTypeFilter; // null = todos, true = ingresos, false = gastos
   bool _isLoading = false;
 
   TransactionProvider({required this.repository});
 
-  List<TransactionModel> get transactions => _transactions;
+  List<TransactionModel> get transactions {
+    if (_selectedTypeFilter == null) return _transactions;
+    return _transactions.where((tx) => tx.isIncome == _selectedTypeFilter).toList();
+  }
   double get balance => _balance;
   double get monthlyIncome => _monthlyIncome;
   double get monthlyExpense => _monthlyExpense;
@@ -26,7 +30,32 @@ class TransactionProvider with ChangeNotifier {
   List<Map<String, dynamic>> get categoryStats => _categoryStats;
   DateTime get selectedMonth => _selectedMonth;
   PeriodType get selectedPeriod => _selectedPeriod;
+  bool? get selectedTypeFilter => _selectedTypeFilter;
   bool get isLoading => _isLoading;
+
+  // NUEVO: Obtener estadísticas por día para el gráfico de líneas
+  List<Map<String, dynamic>> get dailyStats {
+    final Map<int, double> dailyMap = {};
+    
+    for (var tx in _transactions) {
+      if (!tx.isIncome) {
+        final day = tx.date.day;
+        dailyMap[day] = (dailyMap[day] ?? 0.0) + tx.amount;
+      }
+    }
+    
+    // Convertir a lista ordenada por día
+    final List<Map<String, dynamic>> result = [];
+    final lastDay = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
+    
+    for (int i = 1; i <= lastDay; i++) {
+      result.add({
+        'day': i,
+        'amount': dailyMap[i] ?? 0.0,
+      });
+    }
+    return result;
+  }
 
   void setSelectedMonth(DateTime month) {
     _selectedMonth = month;
@@ -36,6 +65,11 @@ class TransactionProvider with ChangeNotifier {
   void setSelectedPeriod(PeriodType period) {
     _selectedPeriod = period;
     fetchTransactions();
+  }
+
+  void setSelectedTypeFilter(bool? isIncome) {
+    _selectedTypeFilter = isIncome;
+    notifyListeners();
   }
 
   Future<void> updateMonthlyLimit(double limit) async {
@@ -82,6 +116,11 @@ class TransactionProvider with ChangeNotifier {
 
   Future<void> addTransaction(TransactionModel transaction) async {
     await repository.addTransaction(transaction);
+    await fetchTransactions();
+  }
+
+  Future<void> updateTransaction(TransactionModel transaction) async {
+    await repository.updateTransaction(transaction);
     await fetchTransactions();
   }
 

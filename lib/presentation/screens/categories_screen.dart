@@ -5,7 +5,7 @@ import 'dart:ui';
 import '../providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../../data/models/category_model.dart';
-import '../widgets/edit_budget_modal.dart';
+import '../widgets/fade_in_slide.dart';
 
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
@@ -23,13 +23,6 @@ class CategoriesScreen extends StatelessWidget {
           style: TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w900, fontSize: 16),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_suggest_rounded, color: Color(0xFFFF0000)),
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              _showBudgetModal(context);
-            },
-          ),
           const SizedBox(width: 8),
         ],
         centerTitle: true,
@@ -53,40 +46,43 @@ class CategoriesScreen extends StatelessWidget {
                   itemCount: provider.categories.length,
                   itemBuilder: (context, index) {
                     final category = provider.categories[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildGlassCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: category.color.withOpacity(0.1),
-                              child: Icon(category.icon, color: category.color, size: 20),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    category.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3436)),
-                                  ),
-                                  Text(
-                                    category.isIncome ? 'Ingreso' : 'Egreso',
-                                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                  ),
-                                ],
+                    return FadeInSlide(
+                      delay: Duration(milliseconds: index * 50),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildGlassCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: category.color.withOpacity(0.1),
+                                child: Icon(category.icon, color: category.color, size: 20),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                _confirmDelete(context, provider, category);
-                              },
-                            ),
-                          ],
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      category.name,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3436)),
+                                    ),
+                                    Text(
+                                      category.isIncome ? 'Ingreso' : 'Egreso',
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  _confirmDelete(context, provider, category);
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -169,15 +165,6 @@ class CategoriesScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddCategoryModal(),
-    );
-  }
-
-  void _showBudgetModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const EditBudgetModal(),
     );
   }
 }
