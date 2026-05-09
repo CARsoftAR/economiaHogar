@@ -8,16 +8,14 @@ class SqliteTransactionRepository implements TransactionRepository {
   SqliteTransactionRepository();
 
   @override
-  Future<List<TransactionModel>> getAllTransactions({DateTime? month}) async {
+  Future<List<TransactionModel>> getAllTransactions({DateTime? start, DateTime? end}) async {
     final db = await dbHelper.database;
     String? where;
     List<dynamic>? whereArgs;
 
-    if (month != null) {
-      final start = DateTime(month.year, month.month, 1).toIso8601String();
-      final end = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
+    if (start != null && end != null) {
       where = 'date >= ? AND date <= ?';
-      whereArgs = [start, end];
+      whereArgs = [start.toIso8601String(), end.toIso8601String()];
     }
 
     final result = await db.query(
@@ -49,12 +47,23 @@ class SqliteTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<Map<String, double>> getMonthlyStats(DateTime month) async {
-    return await dbHelper.getMonthlyStats(month);
+  Future<Map<String, double>> getStatsByRange(DateTime start, DateTime end) async {
+    return await dbHelper.getStatsByRange(start, end);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getCategoryStats(DateTime month) async {
-    return await dbHelper.getCategoryStats(month);
+  Future<List<Map<String, dynamic>>> getCategoryStatsByRange(DateTime start, DateTime end) async {
+    return await dbHelper.getCategoryStatsByRange(start, end);
+  }
+
+  @override
+  Future<double> getMonthlyLimit() async {
+    final limitStr = await dbHelper.getSetting('monthly_limit');
+    return double.tryParse(limitStr ?? '100000') ?? 100000.0;
+  }
+
+  @override
+  Future<void> updateMonthlyLimit(double limit) async {
+    await dbHelper.updateSetting('monthly_limit', limit.toString());
   }
 }

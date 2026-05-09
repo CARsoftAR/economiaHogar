@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../providers/category_provider.dart';
+import '../providers/transaction_provider.dart';
 import '../../data/models/category_model.dart';
+import '../widgets/edit_budget_modal.dart';
 
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
@@ -14,14 +16,18 @@ class CategoriesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF2D3436)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'GESTIÓN DE CATEGORÍAS',
           style: TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w900, fontSize: 16),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_suggest_rounded, color: Color(0xFFFF0000)),
+            onPressed: () => _showBudgetModal(context),
+          ),
+          const SizedBox(width: 8),
+        ],
         centerTitle: true,
       ),
       body: Stack(
@@ -39,7 +45,7 @@ class CategoriesScreen extends StatelessWidget {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 120),
                   itemCount: provider.categories.length,
                   itemBuilder: (context, index) {
                     final category = provider.categories[index];
@@ -84,10 +90,14 @@ class CategoriesScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddCategoryModal(context),
-        backgroundColor: const Color(0xFFFF0000),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton(
+          onPressed: () => _showAddCategoryModal(context),
+          backgroundColor: const Color(0xFFFF0000),
+          elevation: 12,
+          child: const Icon(Icons.add_rounded, color: Colors.white),
+        ),
       ),
     );
   }
@@ -148,6 +158,15 @@ class CategoriesScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const AddCategoryModal(),
+    );
+  }
+
+  void _showBudgetModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const EditBudgetModal(),
     );
   }
 }

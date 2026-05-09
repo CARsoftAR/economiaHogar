@@ -23,10 +23,7 @@ class ReportsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF2D3436)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false, // Quitar botón de retroceso
         title: const Text(
           'REPORTES',
           style: TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.2),
@@ -141,7 +138,7 @@ class ReportsScreen extends StatelessWidget {
                             ),
                           );
                         }),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 120), // ESPACIO PARA LA BARRA
                     ],
                   ),
                 );

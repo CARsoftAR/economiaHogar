@@ -13,9 +13,14 @@ class SqliteReminderRepository implements ReminderRepository {
 
   @override
   Future<List<ReminderModel>> getAllReminders() async {
-    final db = await dbHelper.database;
-    final result = await db.query('reminders', orderBy: 'due_date ASC');
-    return result.map((json) => ReminderModel.fromMap(json)).toList();
+    try {
+      final db = await dbHelper.database;
+      final result = await db.query('reminders', orderBy: 'due_date ASC');
+      return result.map((json) => ReminderModel.fromMap(json)).toList();
+    } catch (e) {
+      print('DEBUG: Error querying reminders table: $e');
+      return []; // Retornar lista vacía para evitar bucles de carga
+    }
   }
 
   @override

@@ -9,6 +9,7 @@ import '../widgets/add_transaction_modal.dart';
 import 'reports_screen.dart';
 import 'categories_screen.dart';
 import 'reminders_screen.dart';
+import '../widgets/edit_budget_modal.dart';
 
 import '../../data/models/category_model.dart';
 import '../../data/models/transaction_model.dart';
@@ -47,7 +48,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      drawer: _buildDrawer(context),
       body: Stack(
         children: [
           Positioned(
@@ -77,13 +77,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              Builder(
-                                builder: (context) => _buildGlassIconButton(
-                                  icon: Icons.menu_rounded,
-                                  onTap: () => Scaffold.of(context).openDrawer(),
-                                ),
-                              ),
-                              const SizedBox(width: 15),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -96,25 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          Row(
-                            children: [
-                              _buildGlassIconButton(
-                                icon: Icons.notifications_none_rounded,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const RemindersScreen()),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              _buildGlassIconButton(
-                                icon: Icons.bar_chart_rounded,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const ReportsScreen()),
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(), // Espacio vacío para balancear el Row
                         ],
                       ),
                       
@@ -149,9 +124,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Expanded(child: _buildStatItem('GASTOS', provider.monthlyExpense, const Color(0xFFFF0000), currencyFormat)),
                               ],
                             ),
+                            const SizedBox(height: 25),
+                            _buildBudgetProgress(provider),
                           ],
                         ),
                       ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // FILTROS DE PERIODO
+                      _buildPeriodFilters(context, provider),
                       
                       const SizedBox(height: 35),
                       const Text('Gasto por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
@@ -283,7 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                       
-                      const SizedBox(height: 100),
+                      const SizedBox(height: 120), // ESPACIO PARA NO QUEDAR DETRÁS DE LA BARRA
                     ],
                   ),
                 );
@@ -292,13 +274,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddTransaction(context),
-        label: const Text('NUEVO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        backgroundColor: const Color(0xFFFF0000),
-        elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80), // SUBIR EL BOTÓN PARA QUE NO SE TAPE
+        child: FloatingActionButton.extended(
+          onPressed: () => _showAddTransaction(context),
+          label: const Text('NUEVO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          backgroundColor: const Color(0xFFFF0000),
+          elevation: 12, // MÁS ELEVACIÓN PARA QUE FLOTE SOBRE EL VIDRIO
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
       ),
     );
   }
@@ -362,74 +347,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
+  Widget _buildBudgetProgress(TransactionProvider provider) {
+    final double progress = (provider.monthlyExpense / provider.monthlyLimit).clamp(0.0, 1.0);
+    final bool isOver = provider.monthlyExpense >= provider.monthlyLimit;
+    
+    // Configuración de Gradientes y Colores
+    List<Color> gradientColors;
+    Color textColor;
+    String statusText = 'Presupuesto saludable';
+    
+    if (progress >= 0.9) {
+      gradientColors = [const Color(0xFFB71C1C), const Color(0xFFFF0000)];
+      textColor = const Color(0xFFFF0000);
+      statusText = isOver ? '¡Atención! Límite alcanzado' : 'Límite casi alcanzado';
+    } else if (progress >= 0.7) {
+      gradientColors = [Colors.orange[900]!, Colors.orange];
+      textColor = Colors.orange[800]!;
+      statusText = 'Monto bajo (${((1 - progress) * 100).toStringAsFixed(0)}% restante)';
+    } else {
+      gradientColors = [const Color(0xFF1B5E20), const Color(0xFF4CAF50)];
+      textColor = const Color(0xFF2E7D32);
+    }
+
+    return GestureDetector(
+      onTap: () => _showBudgetModal(context),
+      onLongPress: () => _showBudgetModal(context),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 180,
-            width: double.infinity,
-            padding: const EdgeInsets.all(25),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8F9FA),
-              border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('ECONOMÍA', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFFFF0000))),
-                Text('HOGAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(statusText, style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}%', 
+                style: const TextStyle(color: Color(0xFF2D3436), fontSize: 12, fontWeight: FontWeight.w900)
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          _buildDrawerItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => Navigator.pop(context),
-          ),
-          _buildDrawerItem(
-            icon: Icons.category_rounded,
-            title: 'Categorías',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoriesScreen()));
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.notifications_none_rounded,
-            title: 'Agenda de Pagos',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const RemindersScreen()));
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.bar_chart_rounded,
-            title: 'Reportes',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ReportsScreen()));
-            },
-          ),
-          const Spacer(),
-          const Padding(
-            padding: EdgeInsets.all(25),
-            child: Text('Versión 1.3.0', style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 10),
+          // BARRA CUSTOM GLASS
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Container(
+                height: 16,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.35),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2), spreadRadius: -1),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Indicador de Progreso con Gradiente
+                    FractionallySizedBox(
+                      widthFactor: progress.clamp(0.05, 1.0), // Mínimo 5% para que se vea el redondeado
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: gradientColors,
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(color: gradientColors.last.withOpacity(0.3), blurRadius: 6, offset: const Offset(2, 0)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap}) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFF2D3436)),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
+  void _showBudgetModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const EditBudgetModal(),
+    );
+  }
+
+  Widget _buildPeriodFilters(BuildContext context, TransactionProvider provider) {
+    return _buildGlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildPeriodChip(context, 'Hoy', PeriodType.hoy, provider),
+          _buildPeriodChip(context, 'Semana', PeriodType.semana, provider),
+          _buildPeriodChip(context, 'Mes', PeriodType.mes, provider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodChip(BuildContext context, String label, PeriodType period, TransactionProvider provider) {
+    final isSelected = provider.selectedPeriod == period;
+    return GestureDetector(
+      onTap: () => provider.setSelectedPeriod(period),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF0000) : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: isSelected ? [BoxShadow(color: const Color(0xFFFF0000).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1,
+          ),
+        ),
+      ),
     );
   }
 }

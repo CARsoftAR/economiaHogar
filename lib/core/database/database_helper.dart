@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4, // Subimos a la v4 para los recordatorios
+      version: 5, // Subimos a la v5 para el presupuesto
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -54,6 +54,10 @@ class DatabaseHelper {
         )
       ''');
     }
+    if (oldVersion < 5) {
+      await db.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)');
+      await db.insert('settings', {'key': 'monthly_limit', 'value': '100000'}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -79,7 +83,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE reminders (
+      CREATE TABLE IF NOT EXISTS reminders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         amount REAL NOT NULL,
@@ -88,6 +92,9 @@ class DatabaseHelper {
         is_completed INTEGER NOT NULL
       )
     ''');
+
+    await db.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)');
+    await db.insert('settings', {'key': 'monthly_limit', 'value': '100000'}, conflictAlgorithm: ConflictAlgorithm.ignore);
 
     await _seedDefaultCategories(db);
     await _seedInitialData(db);
@@ -115,27 +122,51 @@ class DatabaseHelper {
         await db.insert('transactions', data);
       }
     }
+    
+    // Verificar y sembrar recordatorios si está vacío
+    final reminderCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM reminders'));
+    if (reminderCount == 0) {
+      await db.insert('reminders', {
+        'title': 'Factura de Luz (Ejemplo)',
+        'amount': 0.0,
+        'due_date': DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+        'type': 'Pago',
+        'is_completed': 0
+      });
+    }
   }
 
   // Métodos de consulta existentes... (omitidos para brevedad pero se mantienen)
-  Future<Map<String, double>> getMonthlyStats(DateTime month) async {
+  Future<Map<String, double>> getStatsByRange(DateTime start, DateTime end) async {
     final db = await database;
-    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
-    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
-    final result = await db.rawQuery('SELECT isIncome, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? GROUP BY isIncome', [firstDay, lastDay]);
+    final startStr = start.toIso8601String();
+    final endStr = end.toIso8601String();
+    final result = await db.rawQuery('SELECT isIncome, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? GROUP BY isIncome', [startStr, endStr]);
     double income = 0;
     double expense = 0;
     for (var row in result) {
-      if (row['isIncome'] == 1) income = row['total'] as double;
-      else expense = row['total'] as double;
+      if (row['isIncome'] == 1) income = (row['total'] as num).toDouble();
+      else expense = (row['total'] as num).toDouble();
     }
     return {'income': income, 'expense': expense};
   }
 
-  Future<List<Map<String, dynamic>>> getCategoryStats(DateTime month) async {
+  Future<List<Map<String, dynamic>>> getCategoryStatsByRange(DateTime start, DateTime end) async {
     final db = await database;
-    final firstDay = DateTime(month.year, month.month, 1).toIso8601String();
-    final lastDay = DateTime(month.year, month.month + 1, 0, 23, 59, 59).toIso8601String();
-    return await db.rawQuery('SELECT categoryId, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? AND isIncome = 0 GROUP BY categoryId ORDER BY total DESC', [firstDay, lastDay]);
+    final startStr = start.toIso8601String();
+    final endStr = end.toIso8601String();
+    return await db.rawQuery('SELECT categoryId, SUM(amount) as total FROM transactions WHERE date >= ? AND date <= ? AND isIncome = 0 GROUP BY categoryId ORDER BY total DESC', [startStr, endStr]);
+  }
+
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final result = await db.query('settings', where: 'key = ?', whereArgs: [key]);
+    if (result.isNotEmpty) return result.first['value'] as String;
+    return null;
+  }
+
+  Future<void> updateSetting(String key, String value) async {
+    final db = await database;
+    await db.insert('settings', {'key': key, 'value': value}, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }

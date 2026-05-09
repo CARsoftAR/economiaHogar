@@ -19,10 +19,7 @@ class RemindersScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF2D3436)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'AGENDA DE PAGOS',
           style: TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.1),
@@ -45,12 +42,12 @@ class RemindersScreen extends StatelessWidget {
 
                 if (provider.reminders.isEmpty) {
                   return const Center(
-                    child: Text('No tienes recordatorios pendientes', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                    child: Text('No tienes pagos pendientes. ¡Buen trabajo!', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 120), // ESPACIO PARA LA BARRA
                   itemCount: provider.reminders.length,
                   itemBuilder: (context, index) {
                     final reminder = provider.reminders[index];
@@ -62,10 +59,14 @@ class RemindersScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddReminderModal(context),
-        backgroundColor: const Color(0xFFFF0000),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton(
+          onPressed: () => _showAddReminderModal(context),
+          backgroundColor: const Color(0xFFFF0000),
+          elevation: 12,
+          child: const Icon(Icons.add_rounded, color: Colors.white),
+        ),
       ),
     );
   }

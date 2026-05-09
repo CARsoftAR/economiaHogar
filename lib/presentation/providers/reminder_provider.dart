@@ -16,9 +16,15 @@ class ReminderProvider with ChangeNotifier {
   Future<void> fetchReminders() async {
     _isLoading = true;
     notifyListeners();
-    _reminders = await repository.getAllReminders();
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _reminders = await repository.getAllReminders();
+    } catch (e) {
+      debugPrint('Error cargando recordatorios: $e');
+      // Podríamos agregar un estado de error si fuera necesario
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addReminder(ReminderModel reminder) async {
