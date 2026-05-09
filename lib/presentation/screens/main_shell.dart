@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'dashboard_screen.dart';
 import 'reports_screen.dart';
@@ -14,6 +15,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  final PageController _pageController = PageController();
 
   final List<Widget> _screens = [
     const DashboardScreen(),
@@ -22,12 +24,31 @@ class _MainShellState extends State<MainShell> {
     const CategoriesScreen(),
   ];
 
+  void _onItemTapped(int index) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutQuart,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Permite que el contenido se vea bajo la barra traslúcida
-      body: IndexedStack(
-        index: _selectedIndex,
+      extendBody: true,
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(), // Controlamos la navegación solo por botones
         children: _screens,
       ),
       bottomNavigationBar: _buildGlassBottomBar(),
@@ -69,7 +90,7 @@ class _MainShellState extends State<MainShell> {
   Widget _buildNavItem(IconData icon, int index, String label) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () => _onItemTapped(index),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,

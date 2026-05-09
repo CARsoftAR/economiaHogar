@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
@@ -10,6 +11,7 @@ import 'reports_screen.dart';
 import 'categories_screen.dart';
 import 'reminders_screen.dart';
 import '../widgets/edit_budget_modal.dart';
+import '../widgets/fade_in_slide.dart';
 
 import '../../data/models/category_model.dart';
 import '../../data/models/transaction_model.dart';
@@ -72,127 +74,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const SizedBox(height: 25),
                       
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
-                                  ),
-                                  const Text('Resumen Mensual', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(), // Espacio vacío para balancear el Row
-                        ],
-                      ),
+                      const SizedBox(height: 15),
                       
-                      const SizedBox(height: 30),
-                      
-                      _buildGlassCard(
+                      // CONTENEDOR PRINCIPAL BLANCO
+                      FadeInSlide(
+                        duration: const Duration(milliseconds: 800),
+                        child: Container(
                         padding: const EdgeInsets.all(25),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
+                          ],
+                        ),
                         child: Column(
                           children: [
-                            const Text(
-                              'SALDO ACTUAL',
-                              style: TextStyle(color: Colors.grey, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w900),
-                            ),
-                            const SizedBox(height: 12),
-                            Stack(
-                              alignment: Alignment.center,
+                            // 1. BLOQUE DE SALDO PRINCIPAL
+                            Column(
                               children: [
-                                const Opacity(opacity: 0.15, child: TrendLineChart()),
-                                FittedBox(
-                                  child: Text(
-                                    currencyFormat.format(provider.balance),
-                                    style: const TextStyle(color: Color(0xFF2D3436), fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -1.5),
+                                const Text(
+                                  'SALDO ACTUAL',
+                                  style: TextStyle(color: Colors.grey, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  currencyFormat.format(provider.balance),
+                                  style: const TextStyle(
+                                    color: Color(0xFF0984E3), // Azul Vibrante
+                                    fontSize: 36, 
+                                    fontWeight: FontWeight.w900, 
+                                    letterSpacing: -1,
                                   ),
                                 ),
                               ],
                             ),
+                            
                             const SizedBox(height: 30),
+                            
+                            // 2. FILA DE RESUMEN (INGRESOS/GASTOS)
                             Row(
                               children: [
-                                Expanded(child: _buildStatItem('INGRESOS', provider.monthlyIncome, const Color(0xFF2E7D32), currencyFormat)),
-                                Container(width: 1, height: 35, color: Colors.black.withOpacity(0.05)),
-                                Expanded(child: _buildStatItem('GASTOS', provider.monthlyExpense, const Color(0xFFFF0000), currencyFormat)),
+                                Expanded(
+                                  child: _buildSummaryBox('INGRESOS', provider.monthlyIncome, const Color(0xFF2E7D32), currencyFormat),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: _buildSummaryBox('GASTOS', provider.monthlyExpense, const Color(0xFFFF0000), currencyFormat),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 25),
-                            _buildBudgetProgress(provider),
+                            
+                            const SizedBox(height: 30),
+                            
+                            // 3. INDICADOR DE PRESUPUESTO CIRCULAR
+                            _buildCircularBudget(provider),
+                            
+                            const SizedBox(height: 30),
+                            
+                            // 4. BOTONES DE FILTRO
+                            _buildPillFilters(provider),
                           ],
                         ),
                       ),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // FILTROS DE PERIODO
-                      _buildPeriodFilters(context, provider),
-                      
-                      const SizedBox(height: 35),
-                      const Text('Gasto por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                    ),
+                    
+                    const SizedBox(height: 40),
+                      const FadeInSlide(
+                        delay: Duration(milliseconds: 400),
+                        child: Text('Gasto por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      ),
                       const SizedBox(height: 15),
                       
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
-                        children: provider.categoryStats.take(4).map((stat) {
+                        children: provider.categoryStats.take(4).toList().asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final stat = entry.value;
                           final category = categoryProvider.getCategoryById(stat['categoryId']);
                           final amount = stat['total'] as double;
                           final progress = (amount / (provider.monthlyIncome > 0 ? provider.monthlyIncome : 100000)).clamp(0.05, 1.0);
                           
-                          return SizedBox(
-                            width: (MediaQuery.of(context).size.width - 52) / 2,
-                            child: _buildGlassCard(
-                              padding: const EdgeInsets.all(15),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(category.icon, size: 16, color: category.color),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          category.name,
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    currencyFormat.format(amount).split(',')[0],
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    height: 3,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.03),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: FractionallySizedBox(
-                                      alignment: Alignment.centerLeft,
-                                      widthFactor: progress,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: category.color.withOpacity(0.4),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          return FadeInSlide(
+                            delay: Duration(milliseconds: 500 + (index * 100)),
+                            child: SizedBox(
+                              width: (MediaQuery.of(context).size.width - 52) / 2,
+                              child: _buildCategoryStatCard(category, amount, progress, currencyFormat),
                             ),
                           );
                         }).toList(),
@@ -219,48 +187,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: provider.transactions.length,
+                        itemCount: provider.transactions.take(5).length,
                         itemBuilder: (context, index) {
                           final tx = provider.transactions[index];
                           final category = categoryProvider.getCategoryById(tx.categoryId);
-                          
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _buildGlassCard(
-                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: category.color.withOpacity(0.1),
-                                    child: Icon(category.icon, color: category.color, size: 18),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2D3436))),
-                                        Text(
-                                          tx.description.isEmpty ? 'Sin descripción' : tx.description,
-                                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    '${tx.isIncome ? '+' : '-'}${currencyFormat.format(tx.amount)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 15,
-                                      color: tx.isIncome ? const Color(0xFF2E7D32) : const Color(0xFFFF0000),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          return FadeInSlide(
+                            delay: Duration(milliseconds: 700 + (index * 100)),
+                            child: _buildTransactionItem(tx, category, currencyFormat),
                           );
                         },
                       ),
@@ -277,7 +210,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80), // SUBIR EL BOTÓN PARA QUE NO SE TAPE
         child: FloatingActionButton.extended(
-          onPressed: () => _showAddTransaction(context),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            _showAddTransaction(context);
+          },
           label: const Text('NUEVO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
           icon: const Icon(Icons.add_rounded, color: Colors.white),
           backgroundColor: const Color(0xFFFF0000),
@@ -338,6 +274,228 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildSummaryBox(String label, double amount, Color color, NumberFormat format) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 5),
+          Text(format.format(amount), style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircularBudget(TransactionProvider provider) {
+    final double progress = (provider.monthlyExpense / provider.monthlyLimit).clamp(0.0, 1.0);
+    final bool isOver = provider.monthlyExpense >= provider.monthlyLimit;
+    
+    Color statusColor = const Color(0xFF2E7D32);
+    if (progress >= 0.9) statusColor = const Color(0xFFFF0000);
+    else if (progress >= 0.7) statusColor = Colors.orange;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showBudgetModal(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 8,
+                    backgroundColor: Colors.white,
+                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+                ),
+              ],
+            ),
+            const SizedBox(width: 25),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isOver ? '¡Límite alcanzado!' : 'Presupuesto saludable',
+                    style: TextStyle(color: statusColor, fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isOver ? 'Has superado tu meta mensual' : 'Vas por buen camino este mes',
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPillFilters(TransactionProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildFilterPill('HOY', PeriodType.hoy, provider),
+          _buildFilterPill('SEMANA', PeriodType.semana, provider),
+          _buildFilterPill('MES', PeriodType.mes, provider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(TransactionModel tx, CategoryModel category, NumberFormat format) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
+        onTap: () => HapticFeedback.lightImpact(),
+        child: _buildGlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: category.color.withOpacity(0.1),
+                child: Icon(category.icon, color: category.color, size: 18),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2D3436))),
+                    Text(
+                      tx.description.isEmpty ? 'Sin descripción' : tx.description,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${tx.isIncome ? '+' : '-'}${format.format(tx.amount)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  color: tx.isIncome ? const Color(0xFF2E7D32) : const Color(0xFFFF0000),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryStatCard(CategoryModel category, double amount, double progress, NumberFormat format) {
+    return GestureDetector(
+      onTap: () => HapticFeedback.lightImpact(),
+      child: _buildGlassCard(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(category.icon, size: 16, color: category.color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    category.name,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              format.format(amount).split(',')[0],
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 3,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: category.color.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterPill(String label, PeriodType period, TransactionProvider provider) {
+    final isSelected = provider.selectedPeriod == period;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          provider.setSelectedPeriod(period);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFFF0000) : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddTransaction(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -347,132 +505,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildBudgetProgress(TransactionProvider provider) {
-    final double progress = (provider.monthlyExpense / provider.monthlyLimit).clamp(0.0, 1.0);
-    final bool isOver = provider.monthlyExpense >= provider.monthlyLimit;
-    
-    // Configuración de Gradientes y Colores
-    List<Color> gradientColors;
-    Color textColor;
-    String statusText = 'Presupuesto saludable';
-    
-    if (progress >= 0.9) {
-      gradientColors = [const Color(0xFFB71C1C), const Color(0xFFFF0000)];
-      textColor = const Color(0xFFFF0000);
-      statusText = isOver ? '¡Atención! Límite alcanzado' : 'Límite casi alcanzado';
-    } else if (progress >= 0.7) {
-      gradientColors = [Colors.orange[900]!, Colors.orange];
-      textColor = Colors.orange[800]!;
-      statusText = 'Monto bajo (${((1 - progress) * 100).toStringAsFixed(0)}% restante)';
-    } else {
-      gradientColors = [const Color(0xFF1B5E20), const Color(0xFF4CAF50)];
-      textColor = const Color(0xFF2E7D32);
-    }
-
-    return GestureDetector(
-      onTap: () => _showBudgetModal(context),
-      onLongPress: () => _showBudgetModal(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(statusText, style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-              Text(
-                '${(progress * 100).toStringAsFixed(0)}%', 
-                style: const TextStyle(color: Color(0xFF2D3436), fontSize: 12, fontWeight: FontWeight.w900)
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // BARRA CUSTOM GLASS
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return Container(
-                height: 16,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.35),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2), spreadRadius: -1),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    // Indicador de Progreso con Gradiente
-                    FractionallySizedBox(
-                      widthFactor: progress.clamp(0.05, 1.0), // Mínimo 5% para que se vea el redondeado
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: gradientColors,
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(color: gradientColors.last.withOpacity(0.3), blurRadius: 6, offset: const Offset(2, 0)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showBudgetModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const EditBudgetModal(),
-    );
-  }
-
-  Widget _buildPeriodFilters(BuildContext context, TransactionProvider provider) {
-    return _buildGlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildPeriodChip(context, 'Hoy', PeriodType.hoy, provider),
-          _buildPeriodChip(context, 'Semana', PeriodType.semana, provider),
-          _buildPeriodChip(context, 'Mes', PeriodType.mes, provider),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPeriodChip(BuildContext context, String label, PeriodType period, TransactionProvider provider) {
-    final isSelected = provider.selectedPeriod == period;
-    return GestureDetector(
-      onTap: () => provider.setSelectedPeriod(period),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF0000) : Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: isSelected ? [BoxShadow(color: const Color(0xFFFF0000).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
-        ),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey,
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-      ),
     );
   }
 }

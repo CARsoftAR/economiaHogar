@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
@@ -127,7 +128,10 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                             final cat = categories[index];
                             final isSelected = _selectedCategoryId == cat.id;
                             return GestureDetector(
-                              onTap: () => setState(() => _selectedCategoryId = cat.id),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setState(() => _selectedCategoryId = cat.id);
+                              },
                               child: Container(
                                 width: 80,
                                 margin: const EdgeInsets.only(right: 12),
@@ -190,7 +194,10 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
   Widget _buildTypeButton(String label, bool isSelected, VoidCallback onTap, Color activeColor) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -211,6 +218,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   }
 
   void _submitData() {
+    HapticFeedback.mediumImpact();
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(

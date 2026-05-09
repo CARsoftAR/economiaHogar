@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
 
@@ -69,11 +70,8 @@ class _EditBudgetModalState extends State<EditBudgetModal> {
             height: 55,
             child: ElevatedButton(
               onPressed: () {
-                final limit = double.tryParse(_limitController.text) ?? 0;
-                if (limit > 0) {
-                  context.read<TransactionProvider>().updateMonthlyLimit(limit);
-                  Navigator.pop(context);
-                }
+                HapticFeedback.mediumImpact();
+                _saveBudget();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000), 
@@ -89,5 +87,13 @@ class _EditBudgetModalState extends State<EditBudgetModal> {
         ],
       ),
     );
+  }
+
+  void _saveBudget() {
+    final limit = double.tryParse(_limitController.text) ?? 0;
+    if (limit > 0) {
+      context.read<TransactionProvider>().updateMonthlyLimit(limit);
+      Navigator.pop(context);
+    }
   }
 }

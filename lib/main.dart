@@ -36,18 +36,18 @@ void main() async {
           ),
         ),
       ],
-      child: const EconomiaHogarApp(),
+      child: const EcoMilerApp(),
     ),
   );
 }
 
-class EconomiaHogarApp extends StatelessWidget {
-  const EconomiaHogarApp({super.key});
+class EcoMilerApp extends StatelessWidget {
+  const EcoMilerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Economía del Hogar',
+      title: 'ECO-MILER',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       localizationsDelegates: const [

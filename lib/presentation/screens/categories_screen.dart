@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../providers/category_provider.dart';
@@ -24,7 +25,10 @@ class CategoriesScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_suggest_rounded, color: Color(0xFFFF0000)),
-            onPressed: () => _showBudgetModal(context),
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              _showBudgetModal(context);
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -77,7 +81,10 @@ class CategoriesScreen extends StatelessWidget {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
-                              onPressed: () => _confirmDelete(context, provider, category),
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                _confirmDelete(context, provider, category);
+                              },
                             ),
                           ],
                         ),
@@ -93,7 +100,10 @@ class CategoriesScreen extends StatelessWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton(
-          onPressed: () => _showAddCategoryModal(context),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            _showAddCategoryModal(context);
+          },
           backgroundColor: const Color(0xFFFF0000),
           elevation: 12,
           child: const Icon(Icons.add_rounded, color: Colors.white),
@@ -142,6 +152,7 @@ class CategoriesScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
+              HapticFeedback.lightImpact();
               provider.deleteCategory(category.id);
               Navigator.pop(context);
             },
@@ -288,7 +299,10 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                 final icon = _availableIcons[index];
                 final isSelected = _selectedIcon == icon;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedIcon = icon),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() => _selectedIcon = icon);
+                  },
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected ? const Color(0xFFFF0000).withOpacity(0.1) : const Color(0xFFF8F9FA),
@@ -317,7 +331,10 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                   final color = _availableColors[index];
                   final isSelected = _selectedColor == color;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedColor = color),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _selectedColor = color);
+                    },
                     child: Container(
                       width: 45,
                       margin: const EdgeInsets.only(right: 12),
@@ -337,7 +354,10 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: _saveCategory,
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  _saveCategory();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF0000),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -354,7 +374,10 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
 
   Widget _buildTypeButton(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(

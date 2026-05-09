@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
@@ -6,6 +7,7 @@ import '../providers/reminder_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../../data/models/reminder_model.dart';
 import '../../data/models/transaction_model.dart';
+import '../widgets/fade_in_slide.dart';
 
 class RemindersScreen extends StatelessWidget {
   const RemindersScreen({super.key});
@@ -47,11 +49,14 @@ class RemindersScreen extends StatelessWidget {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 120), // ESPACIO PARA LA BARRA
+                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 120),
                   itemCount: provider.reminders.length,
                   itemBuilder: (context, index) {
                     final reminder = provider.reminders[index];
-                    return _buildReminderCard(context, reminder, currencyFormat);
+                    return FadeInSlide(
+                      delay: Duration(milliseconds: 100 + (index * 100)),
+                      child: _buildReminderCard(context, reminder, currencyFormat),
+                    );
                   },
                 );
               },
@@ -62,7 +67,10 @@ class RemindersScreen extends StatelessWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton(
-          onPressed: () => _showAddReminderModal(context),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            _showAddReminderModal(context);
+          },
           backgroundColor: const Color(0xFFFF0000),
           elevation: 12,
           child: const Icon(Icons.add_rounded, color: Colors.white),
@@ -131,7 +139,10 @@ class RemindersScreen extends StatelessWidget {
                 ),
                 if (!reminder.isCompleted)
                   TextButton(
-                    onPressed: () => _handleComplete(context, reminder),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      _handleComplete(context, reminder);
+                    },
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30)),
                     child: const Text('PAGADO', style: TextStyle(color: Color(0xFFFF0000), fontSize: 10, fontWeight: FontWeight.w900)),
                   ),
@@ -282,6 +293,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () async {
+              HapticFeedback.selectionClick();
               final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime(2100));
               if (picked != null) setState(() => _selectedDate = picked);
             },
@@ -302,7 +314,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: _saveReminder,
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                _saveReminder();
+              },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 0),
               child: const Text('GUARDAR RECORDATORIO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
             ),
@@ -314,7 +329,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
 
   Widget _buildTypeButton(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(color: isSelected ? const Color(0xFFFF0000) : const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(15)),

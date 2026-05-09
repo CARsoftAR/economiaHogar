@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'dart:ui';
 import '../providers/transaction_provider.dart';
 import '../providers/category_provider.dart';
 import '../../data/models/category_model.dart';
+import '../widgets/fade_in_slide.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -48,62 +50,74 @@ class ReportsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Distribución de Gastos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      const FadeInSlide(
+                        duration: Duration(milliseconds: 800),
+                        child: Text('Distribución de Gastos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      ),
                       const SizedBox(height: 5),
-                      Text(
-                        DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                      FadeInSlide(
+                        delay: const Duration(milliseconds: 200),
+                        child: Text(
+                          DateFormat('MMMM yyyy', 'es_AR').format(provider.selectedMonth).toUpperCase(),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                        ),
                       ),
                       const SizedBox(height: 30),
                       
-                      _buildGlassCard(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              height: 250,
-                              child: stats.isEmpty 
-                                ? const Center(child: Text('Sin datos para graficar'))
-                                : PieChart(
-                                    PieChartData(
-                                      sectionsSpace: 4,
-                                      centerSpaceRadius: 50,
-                                      sections: stats.map((stat) {
-                                        final category = categoryProvider.getCategoryById(stat['categoryId']);
-                                        final amount = stat['total'] as double;
-                                        final percentage = (amount / totalExpenses * 100);
-                                        
-                                        return PieChartSectionData(
-                                          color: category.color,
-                                          value: amount,
-                                          title: '${percentage.toStringAsFixed(0)}%',
-                                          radius: 60,
-                                          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                                        );
-                                      }).toList(),
+                      FadeInSlide(
+                        delay: const Duration(milliseconds: 400),
+                        child: _buildGlassCard(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 250,
+                                child: stats.isEmpty 
+                                  ? const Center(child: Text('Sin datos para graficar'))
+                                  : PieChart(
+                                      PieChartData(
+                                        sectionsSpace: 4,
+                                        centerSpaceRadius: 50,
+                                        sections: stats.map((stat) {
+                                          final category = categoryProvider.getCategoryById(stat['categoryId']);
+                                          final amount = stat['total'] as double;
+                                          final percentage = (amount / totalExpenses * 100);
+                                          
+                                          return PieChartSectionData(
+                                            color: category.color,
+                                            value: amount,
+                                            title: '${percentage.toStringAsFixed(0)}%',
+                                            radius: 60,
+                                            titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                          );
+                                        }).toList(),
+                                      ),
                                     ),
-                                  ),
-                            ),
-                            if (stats.isNotEmpty) ...[
-                              const SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Total Gastado: ${currencyFormat.format(totalExpenses)}',
-                                    style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                ],
                               ),
+                              if (stats.isNotEmpty) ...[
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Total Gastado: ${currencyFormat.format(totalExpenses)}',
+                                      style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                       
                       const SizedBox(height: 40),
-                      const Text('Desglose por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      const FadeInSlide(
+                        delay: Duration(milliseconds: 600),
+                        child: Text('Desglose por Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436))),
+                      ),
                       const SizedBox(height: 15),
                       
                       if (stats.isEmpty)
@@ -114,26 +128,31 @@ class ReportsScreen extends StatelessWidget {
                           ),
                         )
                       else
-                        ...stats.map((stat) {
+                        ...stats.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final stat = entry.value;
                           final category = categoryProvider.getCategoryById(stat['categoryId']);
                           final amount = stat['total'] as double;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildGlassCard(
-                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: category.color.withOpacity(0.1),
-                                    child: Icon(category.icon, color: category.color, size: 20),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3436))),
-                                  ),
-                                  Text(currencyFormat.format(amount), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF2D3436))),
-                                ],
+                          return FadeInSlide(
+                            delay: Duration(milliseconds: 800 + (index * 100)),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildGlassCard(
+                                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: category.color.withOpacity(0.1),
+                                      child: Icon(category.icon, color: category.color, size: 20),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Expanded(
+                                      child: Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3436))),
+                                    ),
+                                    Text(currencyFormat.format(amount), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF2D3436))),
+                                  ],
+                                ),
                               ),
                             ),
                           );
