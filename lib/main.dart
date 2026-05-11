@@ -12,10 +12,14 @@ import 'presentation/providers/category_provider.dart';
 import 'presentation/providers/reminder_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_AR', null);
+  
+  // Inicializar Notificaciones
+  await NotificationService().init();
   
   runApp(
     MultiProvider(

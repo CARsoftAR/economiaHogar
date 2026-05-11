@@ -3,7 +3,7 @@ import '../../core/database/database_helper.dart';
 
 abstract class ReminderRepository {
   Future<List<ReminderModel>> getAllReminders();
-  Future<void> addReminder(ReminderModel reminder);
+  Future<int> addReminder(ReminderModel reminder);
   Future<void> updateReminder(ReminderModel reminder);
   Future<void> deleteReminder(int id);
 }
@@ -24,9 +24,9 @@ class SqliteReminderRepository implements ReminderRepository {
   }
 
   @override
-  Future<void> addReminder(ReminderModel reminder) async {
+  Future<int> addReminder(ReminderModel reminder) async {
     final db = await dbHelper.database;
-    await db.insert('reminders', reminder.toMap());
+    return await db.insert('reminders', reminder.toMap());
   }
 
   @override

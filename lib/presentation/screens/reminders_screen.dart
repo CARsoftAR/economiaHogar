@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../providers/reminder_provider.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/category_provider.dart';
 import '../../data/models/reminder_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../widgets/fade_in_slide.dart';
@@ -42,7 +43,9 @@ class RemindersScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator(color: Color(0xFFFF0000)));
                 }
 
-                if (provider.reminders.isEmpty) {
+                final reminders = provider.pendingReminders;
+
+                if (reminders.isEmpty) {
                   return const Center(
                     child: Text('No tienes pagos pendientes. ¡Buen trabajo!', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                   );
@@ -50,9 +53,9 @@ class RemindersScreen extends StatelessWidget {
 
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 120),
-                  itemCount: provider.reminders.length,
+                  itemCount: reminders.length,
                   itemBuilder: (context, index) {
-                    final reminder = provider.reminders[index];
+                    final reminder = reminders[index];
                     return FadeInSlide(
                       delay: Duration(milliseconds: 100 + (index * 100)),
                       child: _buildReminderCard(context, reminder, currencyFormat),
@@ -85,68 +88,265 @@ class RemindersScreen extends StatelessWidget {
     final dueDate = DateTime(reminder.dueDate.year, reminder.dueDate.month, reminder.dueDate.day);
     final diff = dueDate.difference(today).inDays;
 
+    String statusText = 'PENDIENTE';
     Color statusColor = Colors.grey;
     bool isUrgent = false;
 
     if (reminder.isCompleted) {
+      statusText = 'PAGADO';
       statusColor = Colors.green;
-    } else if (diff <= 0) {
-      statusColor = const Color(0xFFFF0000); // Vencido o vence hoy
+    } else if (diff < 0) {
+      statusText = 'VENCIDO';
+      statusColor = const Color(0xFFFF0000);
+      isUrgent = true;
+    } else if (diff == 0) {
+      statusText = 'VENCE HOY';
+      statusColor = const Color(0xFFFF0000);
       isUrgent = true;
     } else if (diff <= 3) {
-      statusColor = Colors.orange; // Próximo
+      statusText = 'POR VENCER';
+      statusColor = Colors.orange;
     }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
-      child: _buildGlassCard(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 40,
-              decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _showReminderOptions(context, reminder);
+        },
+        onLongPress: () {
+          HapticFeedback.vibrate();
+          _showReminderOptions(context, reminder);
+        },
+        child: _buildGlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 40,
+                decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      reminder.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: const Color(0xFF2D3436),
+                        decoration: reminder.isCompleted ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${reminder.type} • ${DateFormat('dd MMM yyyy', 'es_AR').format(reminder.dueDate)}',
+                      style: TextStyle(color: isUrgent ? const Color(0xFFFF0000) : Colors.grey[600], fontSize: 12, fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    reminder.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: const Color(0xFF2D3436),
-                      decoration: reminder.isCompleted ? TextDecoration.lineThrough : null,
-                    ),
+                    format.format(reminder.amount),
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: isUrgent ? const Color(0xFFFF0000) : const Color(0xFF2D3436)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
                   Text(
-                    '${reminder.type} • ${DateFormat('dd MMM yyyy', 'es_AR').format(reminder.dueDate)}',
-                    style: TextStyle(color: isUrgent ? const Color(0xFFFF0000) : Colors.grey[600], fontSize: 12, fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal),
+                    statusText,
+                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showReminderOptions(BuildContext context, ReminderModel reminder) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(25),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  format.format(reminder.amount),
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: isUrgent ? const Color(0xFFFF0000) : const Color(0xFF2D3436)),
+            const SizedBox(height: 25),
+            const Text('OPCIONES DE AGENDA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.grey)),
+            const SizedBox(height: 25),
+            if (!reminder.isCompleted) ...[
+              _buildOptionItem(
+                icon: Icons.check_circle_rounded,
+                label: 'Marcar como Pagado',
+                color: Colors.green,
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleComplete(context, reminder);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+            _buildOptionItem(
+              icon: Icons.edit_note_rounded,
+              label: 'Editar Recordatorio',
+              color: const Color(0xFF0984E3),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddReminderModal(context, reminder: reminder);
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildOptionItem(
+              icon: Icons.delete_sweep_rounded,
+              label: 'Borrar Permanentemente',
+              color: const Color(0xFFFF0000),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(context, reminder);
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionItem({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 15),
+            Text(label, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: color)),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.3)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, ReminderModel reminder) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¿Borrar recordatorio?'),
+        content: Text('¿Estás seguro de que deseas eliminar "${reminder.title}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () {
+              context.read<ReminderProvider>().deleteReminder(reminder.id!);
+              Navigator.pop(context);
+            },
+            child: const Text('BORRAR', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleComplete(BuildContext context, ReminderModel reminder) {
+    // Capturamos los providers antes de abrir el diálogo para asegurar consistencia
+    final reminderProvider = Provider.of<ReminderProvider>(context, listen: false);
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        backgroundColor: Colors.white,
+        title: const Text(
+          '¿Confirmar pago?',
+          style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '¿Deseas registrar también este movimiento en tu Dashboard automáticamente?',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 25),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  HapticFeedback.mediumImpact();
+                  // Registrar en transacciones
+                  final newTransaction = TransactionModel(
+                    amount: reminder.amount,
+                    description: '${reminder.type}: ${reminder.title}',
+                    date: DateTime.now(),
+                    isIncome: reminder.type == 'Cobro',
+                    categoryId: reminder.categoryId,
+                  );
+                  await transactionProvider.addTransaction(newTransaction);
+                  // Marcar como completado
+                  await reminderProvider.markAsCompleted(reminder);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF0000),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 0,
                 ),
-                if (!reminder.isCompleted)
-                  TextButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      _handleComplete(context, reminder);
-                    },
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30)),
-                    child: const Text('PAGADO', style: TextStyle(color: Color(0xFFFF0000), fontSize: 10, fontWeight: FontWeight.w900)),
-                  ),
-              ],
+                child: const Text('REGISTRAR Y COMPLETAR', style: TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () async {
+                  HapticFeedback.lightImpact();
+                  await reminderProvider.markAsCompleted(reminder);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                ),
+                child: const Text('SÓLO COMPLETAR', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCELAR', style: TextStyle(color: Colors.grey, fontSize: 12)),
             ),
           ],
         ),
@@ -154,47 +354,12 @@ class RemindersScreen extends StatelessWidget {
     );
   }
 
-  void _handleComplete(BuildContext context, ReminderModel reminder) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('¿Confirmar pago?'),
-        content: const Text('¿Deseas registrar también este movimiento en tu Dashboard automáticamente?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.read<ReminderProvider>().markAsCompleted(reminder);
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('SÓLO COMPLETAR', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              // Generar movimiento
-              final newTransaction = TransactionModel(
-                amount: reminder.amount,
-                description: 'Pago: ${reminder.title}',
-                date: DateTime.now(),
-                isIncome: reminder.type == 'Cobro',
-                categoryId: 'others',
-              );
-              context.read<TransactionProvider>().addTransaction(newTransaction);
-              context.read<ReminderProvider>().markAsCompleted(reminder);
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('REGISTRAR Y COMPLETAR', style: TextStyle(color: Color(0xFFFF0000), fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddReminderModal(BuildContext context) {
+  void _showAddReminderModal(BuildContext context, {ReminderModel? reminder}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddReminderModal(),
+      builder: (context) => AddReminderModal(reminder: reminder),
     );
   }
 
@@ -230,7 +395,8 @@ class RemindersScreen extends StatelessWidget {
 }
 
 class AddReminderModal extends StatefulWidget {
-  const AddReminderModal({super.key});
+  final ReminderModel? reminder;
+  const AddReminderModal({super.key, this.reminder});
 
   @override
   State<AddReminderModal> createState() => _AddReminderModalState();
@@ -241,89 +407,165 @@ class _AddReminderModalState extends State<AddReminderModal> {
   final _amountController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String _type = 'Pago';
+  String _selectedCategoryId = 'others';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.reminder != null) {
+      _titleController.text = widget.reminder!.title;
+      _amountController.text = widget.reminder!.amount.toString();
+      _selectedDate = widget.reminder!.dueDate;
+      _type = widget.reminder!.type;
+      _selectedCategoryId = widget.reminder!.categoryId;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(top: 25, left: 25, right: 25, bottom: MediaQuery.of(context).viewInsets.bottom + 25),
       decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('NUEVO RECORDATORIO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF2D3436))),
-              IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _titleController,
-            decoration: InputDecoration(
-              labelText: 'Título del Recordatorio',
-              filled: true,
-              fillColor: const Color(0xFFF8F9FA),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  widget.reminder != null ? 'EDITAR RECORDATORIO' : 'NUEVO RECORDATORIO',
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF2D3436))
+                ),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+              ],
             ),
-          ),
-          const SizedBox(height: 15),
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Monto',
-              prefixText: '\$ ',
-              filled: true,
-              fillColor: const Color(0xFFF8F9FA),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _buildTypeButton('Pago', _type == 'Pago', () => setState(() => _type = 'Pago'))),
-              const SizedBox(width: 15),
-              Expanded(child: _buildTypeButton('Cobro', _type == 'Cobro', () => setState(() => _type = 'Cobro'))),
-            ],
-          ),
-          const SizedBox(height: 25),
-          const Text('Fecha de Vencimiento', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () async {
-              HapticFeedback.selectionClick();
-              final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime(2100));
-              if (picked != null) setState(() => _selectedDate = picked);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(15)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(DateFormat('dd / MM / yyyy').format(_selectedDate), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFFFF0000)),
-                ],
+            const SizedBox(height: 20),
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                labelText: 'Título del Recordatorio',
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
               ),
             ),
-          ),
-          const SizedBox(height: 35),
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                _saveReminder();
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 0),
-              child: const Text('GUARDAR RECORDATORIO', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Monto',
+                prefixText: '\$ ',
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(child: _buildTypeButton('Pago', _type == 'Pago', () => setState(() => _type = 'Pago'))),
+                const SizedBox(width: 15),
+                Expanded(child: _buildTypeButton('Cobro', _type == 'Cobro', () => setState(() => _type = 'Cobro'))),
+              ],
+            ),
+            const SizedBox(height: 25),
+            const Text('Fecha de Vencimiento', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () async {
+                HapticFeedback.selectionClick();
+                final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                if (picked != null) setState(() => _selectedDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(15)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(DateFormat('dd / MM / yyyy').format(_selectedDate), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFFFF0000)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 25),
+            const Text('Categoría para el Movimiento', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+            const SizedBox(height: 10),
+            _buildCategorySelector(),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  _saveReminder();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF0000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 0),
+                child: Text(
+                  widget.reminder != null ? 'ACTUALIZAR RECORDATORIO' : 'GUARDAR RECORDATORIO',
+                  style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white)
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildCategorySelector() {
+    return Consumer<CategoryProvider>(
+      builder: (context, provider, child) {
+        // Mostramos todas las categorías sin filtrar por tipo, como pidió el usuario
+        final allCategories = provider.categories;
+        
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: allCategories.map((cat) {
+            final isSelected = _selectedCategoryId == cat.id;
+            
+            return GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _selectedCategoryId = cat.id);
+              },
+              child: Container(
+                width: (MediaQuery.of(context).size.width - 80) / 4, // 4 columnas
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                decoration: BoxDecoration(
+                  color: isSelected ? cat.color.withOpacity(0.1) : const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(15),
+                  border: isSelected ? Border.all(color: cat.color, width: 2) : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(cat.icon, color: isSelected ? cat.color : Colors.grey, size: 22),
+                    const SizedBox(height: 5),
+                    Text(
+                      cat.name,
+                      style: TextStyle(
+                        fontSize: 9, 
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, 
+                        color: isSelected ? cat.color : Colors.grey
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
@@ -347,14 +589,27 @@ class _AddReminderModalState extends State<AddReminderModal> {
     final amount = double.tryParse(_amountController.text) ?? 0;
     if (amount <= 0) return;
 
-    final newReminder = ReminderModel(
-      title: _titleController.text,
-      amount: amount,
-      dueDate: _selectedDate,
-      type: _type,
-    );
-
-    context.read<ReminderProvider>().addReminder(newReminder);
+    if (widget.reminder != null) {
+      // Editar existente
+      final updatedReminder = widget.reminder!.copyWith(
+        title: _titleController.text,
+        amount: amount,
+        dueDate: _selectedDate,
+        type: _type,
+        categoryId: _selectedCategoryId,
+      );
+      context.read<ReminderProvider>().updateReminder(updatedReminder);
+    } else {
+      // Crear nuevo
+      final newReminder = ReminderModel(
+        title: _titleController.text,
+        amount: amount,
+        dueDate: _selectedDate,
+        type: _type,
+        categoryId: _selectedCategoryId,
+      );
+      context.read<ReminderProvider>().addReminder(newReminder);
+    }
     Navigator.pop(context);
   }
 }

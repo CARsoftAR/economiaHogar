@@ -7,6 +7,7 @@ import '../providers/reminder_provider.dart';
 import '../../core/services/backup_service.dart';
 import '../widgets/edit_budget_modal.dart';
 import '../widgets/fade_in_slide.dart';
+import '../../core/database/database_helper.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -110,6 +111,47 @@ class SettingsScreen extends StatelessWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Datos restaurados correctamente')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 30),
+              
+              FadeInSlide(
+                delay: const Duration(milliseconds: 700),
+                child: _buildSettingsCard(
+                  context,
+                  icon: Icons.delete_forever_rounded,
+                  title: 'Reiniciar Datos de Fábrica',
+                  subtitle: 'Borra todos los movimientos y agenda',
+                  onTap: () async {
+                    HapticFeedback.vibrate();
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('¿Estás seguro?'),
+                        content: const Text('Esto borrará todos tus movimientos y recordatorios de forma permanente. Las categorías se mantendrán.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCELAR')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true), 
+                            child: const Text('SÍ, BORRAR TODO', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true && context.mounted) {
+                      final db = DatabaseHelper.instance;
+                      await db.clearAllData();
+                      if (context.mounted) {
+                        await context.read<TransactionProvider>().fetchTransactions();
+                        await context.read<ReminderProvider>().fetchReminders();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('La aplicación ha sido limpiada')),
                         );
                       }
                     }

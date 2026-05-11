@@ -7,6 +7,7 @@ class ReminderModel {
   final DateTime dueDate;
   final String type; // 'Pago' o 'Cobro'
   final bool isCompleted;
+  final String categoryId;
 
   ReminderModel({
     this.id,
@@ -15,6 +16,7 @@ class ReminderModel {
     required this.dueDate,
     required this.type,
     this.isCompleted = false,
+    required this.categoryId,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class ReminderModel {
       'due_date': dueDate.toIso8601String(),
       'type': type,
       'is_completed': isCompleted ? 1 : 0,
+      'categoryId': categoryId,
     };
   }
 
@@ -36,6 +39,7 @@ class ReminderModel {
       dueDate: DateTime.parse(map['due_date']),
       type: map['type'],
       isCompleted: map['is_completed'] == 1,
+      categoryId: map['categoryId'] ?? 'others',
     );
   }
 
@@ -46,6 +50,7 @@ class ReminderModel {
     DateTime? dueDate,
     String? type,
     bool? isCompleted,
+    String? categoryId,
   }) {
     return ReminderModel(
       id: id ?? this.id,
@@ -54,6 +59,7 @@ class ReminderModel {
       dueDate: dueDate ?? this.dueDate,
       type: type ?? this.type,
       isCompleted: isCompleted ?? this.isCompleted,
+      categoryId: categoryId ?? this.categoryId,
     );
   }
 }
