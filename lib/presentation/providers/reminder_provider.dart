@@ -42,12 +42,16 @@ class ReminderProvider with ChangeNotifier {
 
     final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2, locale: 'es_AR');
 
-    await NotificationService().scheduleReminderNotification(
-      id: id,
-      title: '¡VENCIMIENTO HOY!',
-      body: '${reminder.type}: ${reminder.title} por ${currencyFormat.format(reminder.amount)}',
-      scheduledDate: scheduledDate,
-    );
+    try {
+      await NotificationService().scheduleReminderNotification(
+        id: id,
+        title: '¡VENCIMIENTO HOY!',
+        body: '${reminder.type}: ${reminder.title} por ${currencyFormat.format(reminder.amount)}',
+        scheduledDate: scheduledDate,
+      );
+    } catch (e) {
+      debugPrint('Error agendando notificación: $e');
+    }
 
     await fetchReminders();
   }
@@ -58,7 +62,11 @@ class ReminderProvider with ChangeNotifier {
     
     // Cancelar la alarma si se marca como pagado
     if (reminder.id != null) {
-      await NotificationService().cancelNotification(reminder.id!);
+      try {
+        await NotificationService().cancelNotification(reminder.id!);
+      } catch (e) {
+        debugPrint('Error cancelando notificación: $e');
+      }
     }
     
     await fetchReminders();
@@ -69,23 +77,27 @@ class ReminderProvider with ChangeNotifier {
     
     // Si se actualizó la fecha o el monto, refrescar la alarma
     if (reminder.id != null && !reminder.isCompleted) {
-      await NotificationService().cancelNotification(reminder.id!);
-      
-      final scheduledDate = DateTime(
-        reminder.dueDate.year,
-        reminder.dueDate.month,
-        reminder.dueDate.day,
-        9, 0, 0,
-      );
-      
-      final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2, locale: 'es_AR');
-      
-      await NotificationService().scheduleReminderNotification(
-        id: reminder.id!,
-        title: '¡VENCIMIENTO HOY!',
-        body: '${reminder.type}: ${reminder.title} por ${currencyFormat.format(reminder.amount)}',
-        scheduledDate: scheduledDate,
-      );
+      try {
+        await NotificationService().cancelNotification(reminder.id!);
+        
+        final scheduledDate = DateTime(
+          reminder.dueDate.year,
+          reminder.dueDate.month,
+          reminder.dueDate.day,
+          9, 0, 0,
+        );
+        
+        final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2, locale: 'es_AR');
+        
+        await NotificationService().scheduleReminderNotification(
+          id: reminder.id!,
+          title: '¡VENCIMIENTO HOY!',
+          body: '${reminder.type}: ${reminder.title} por ${currencyFormat.format(reminder.amount)}',
+          scheduledDate: scheduledDate,
+        );
+      } catch (e) {
+        debugPrint('Error actualizando notificación: $e');
+      }
     }
     
     await fetchReminders();
@@ -93,7 +105,11 @@ class ReminderProvider with ChangeNotifier {
 
   Future<void> deleteReminder(int id) async {
     await repository.deleteReminder(id);
-    await NotificationService().cancelNotification(id);
+    try {
+      await NotificationService().cancelNotification(id);
+    } catch (e) {
+      debugPrint('Error cancelando notificación: $e');
+    }
     await fetchReminders();
   }
 }

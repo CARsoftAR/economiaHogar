@@ -155,7 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 30),
                             
                             // 3. INDICADOR DE PRESUPUESTO CIRCULAR
-                            _buildCircularBudget(provider),
+                            _buildCircularBudget(provider, currencyFormat),
                             
                             const SizedBox(height: 30),
                             
@@ -314,8 +314,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildCircularBudget(TransactionProvider provider) {
-    final double progress = (provider.monthlyExpense / provider.monthlyLimit).clamp(0.0, 1.0);
+  Widget _buildCircularBudget(TransactionProvider provider, NumberFormat format) {
+    final double progress = (provider.monthlyLimit > 0) ? (provider.monthlyExpense / provider.monthlyLimit).clamp(0.0, 1.0) : 0.0;
     final bool isOver = provider.monthlyExpense >= provider.monthlyLimit;
     
     Color statusColor = const Color(0xFF2E7D32);
@@ -367,6 +367,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Text(
                     isOver ? 'Has superado tu meta mensual' : 'Vas por buen camino este mes',
                     style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Límite: ${format.format(provider.monthlyLimit)}',
+                    style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -578,14 +583,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFF0000) : Colors.transparent,
+            color: isSelected ? const Color(0xFFFFF59D) : Colors.transparent,
             borderRadius: BorderRadius.circular(15),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
+              color: isSelected ? const Color(0xFF2D3436) : Colors.grey,
               fontSize: 10,
               fontWeight: FontWeight.w900,
               letterSpacing: 1,
